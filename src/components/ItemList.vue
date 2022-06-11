@@ -1,6 +1,7 @@
 <script setup>
 import IconDismissCircle from '@/assets/icons/dismiss-circle.svg?component'
 import LikeButton from '@/components/LikeButton.vue'
+import SortButtons from '@/components/SortButtons.vue'
 import { API_URL, LOADING_DELAY } from '@/helpers/constants'
 import { capitalize, padZeros, removeCharacter } from '@/helpers/filters'
 import { promiseTimeout, useFetch, useTitle } from '@vueuse/core'
@@ -8,6 +9,8 @@ import { onMounted, watchEffect } from 'vue'
 
 const props = defineProps({ search: String })
 const emit = defineEmits(['clear-search', 'item-clicked'])
+
+let sortBy = $ref('id')
 
 // Starting reactive object to handle the state of the API fetch.
 let fetchState = $ref({ isFetching: true, error: null, data: null })
@@ -31,11 +34,17 @@ const items = $computed(() => {
 
 // Computed list of API results filtered by search text.
 const filteredItems = $computed(() => {
-  return items.filter(
-    (item) =>
-      item.name.indexOf(props.search.toLowerCase()) > -1 ||
-      item.id === Number(props.search)
-  )
+  return items
+    .sort((a, b) => {
+      return sortBy == 'id'
+        ? a[sortBy] - b[sortBy]
+        : a[sortBy].localeCompare(b[sortBy])
+    })
+    .filter(
+      (item) =>
+        item.name.indexOf(props.search.toLowerCase()) > -1 ||
+        item.id === Number(props.search)
+    )
 })
 
 // Computed message with count of items found after a search.
@@ -50,6 +59,10 @@ const itensFoundMessage = $computed(() => {
 watchEffect(() =>
   useTitle(itensFoundMessage ? `${itensFoundMessage} - PokéDex` : 'PokéDex')
 )
+
+function sortItems(key) {
+  sortBy = key
+}
 </script>
 
 <template>
@@ -75,7 +88,7 @@ watchEffect(() =>
   <template v-else>
     <div
       v-if="props.search"
-      class="mb-8 flex gap-4 flex-wrap items-center justify-center"
+      class="mb-5 flex gap-4 flex-wrap items-center justify-center"
     >
       <p class="text-gray-700">
         Search results for <b>{{ props.search }}</b
@@ -90,6 +103,10 @@ watchEffect(() =>
         <IconDismissCircle class="w-4 h-4" />
         <span>Clear</span>
       </button>
+    </div>
+
+    <div>
+      <SortButtons @sort-by="sortItems" />
     </div>
 
     <ol
